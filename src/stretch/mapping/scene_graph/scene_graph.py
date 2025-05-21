@@ -20,11 +20,12 @@ from stretch.utils.memory import get_path_to_debug
 class SceneGraph:
     """Compute a very simple scene graph. Use it to extract relationships between instances."""
 
-    def __init__(self, parameters: Parameters, instances: List[Instance]):
+    def __init__(self, parameters: Parameters, instances: List[Instance], hashmap: dict = None):
         self.parameters = parameters
         self.instances = instances
         self.relationships: List[Tuple[int, int, str]] = []
         self.update(instances)
+        self.hashmap = hashmap
 
     def update(self, instances):
         """Extract pairwise symbolic spatial relationship between instances using heurisitcs"""
@@ -124,9 +125,19 @@ class SceneGraph:
                 if idx_b == "floor":
                     img_a = self.get_instance_image(idx_a)
                     img_b = np.zeros_like(img_a)
+                    cat_id_b = "floor"
+                    global_id_b = "floor"
                 else:
                     img_a = self.get_instance_image(idx_a)
                     img_b = self.get_instance_image(idx_b)
+                    cat_id_b = self.instances[idx_b].get_category_id()
+                    global_id_b = self.instances[idx_b].global_id
+
+                cat_id_a = self.instances[idx_a].get_category_id()
+                global_id_a = self.instances[idx_a].global_id
+
+                if cat_id_b == "floor":
+                    cat_id_b = 0
 
                 import matplotlib
 
@@ -135,11 +146,11 @@ class SceneGraph:
 
                 plt.subplot(1, 2, 1)
                 plt.imshow(img_a)
-                plt.title("Instance A is " + rel)
+                plt.title(f"A: gid={global_id_a}, cid={cat_id_a}, obj={self.hashmap[cat_id_a]}\n{rel}")
                 plt.axis("off")
                 plt.subplot(1, 2, 2)
                 plt.imshow(img_b)
-                plt.title("Instance B")
+                plt.title(f"B: gid={global_id_b}, cid={cat_id_b}, obj={self.hashmap[cat_id_b]}")
                 plt.axis("off")
                 plt.show()
                 plt.savefig(get_path_to_debug(f"scene_graph_{idx_a}_{idx_b}_{rel}.png"))
@@ -184,3 +195,29 @@ class SceneGraph:
         if pos[2] < self.parameters["scene_graph"]["max_on_height"] and pos[2] > 0:
             return True
         return False
+    
+    import json
+    def get_relationships_json(self):
+        """Return relationships as a JSON-serializable list with object names and global ids."""
+        relationships_json = []
+        for idx_a, idx_b, rel in self.relationships:
+            # Handle floor case for B
+            if idx_b == "floor":
+                obj_b = "floor"
+                gid_b = "floor"
+                cid_b = 0
+            else:
+                instance_b = self.instances[idx_b]
+                cid_b = instance_b.get_category_id()
+                gid_b = instance_b.global_id
+                obj_b = self.hashmap.get(cid_b, str(cid_b))
+
+            instance_a = self.instances[idx_a]
+            cid_a = instance_a.get_category_id()
+            gid_a = instance_a.global_id
+            obj_a = self.hashmap.get(cid_a, str(cid_a))
+
+            relationships_json.append(
+                f"{obj_a} (gid={gid_a}) is {rel} => {obj_b} (gid={gid_b})"
+            )
+        return relationships_json

@@ -26,6 +26,7 @@ import skimage
 import torch
 import tqdm
 from torch import Tensor
+import cv2
 
 import stretch.utils.compression as compression
 from stretch.core.interfaces import Observations
@@ -83,7 +84,6 @@ def ensure_tensor(arr) -> Tensor:
         return Tensor(arr)
     if not isinstance(arr, Tensor):
         raise ValueError(f"arr of unknown type ({type(arr)}) cannot be cast to Tensor")
-
 
 class SparseVoxelMap(object):
     """Create a voxel map object which captures 3d information.
@@ -796,7 +796,13 @@ class SparseVoxelMap(object):
         if len(instance_data) == 0:
             logger.error("No instance data found in file")
             return False
-
+        
+        import matplotlib.pyplot as plt
+        import torch
+        plt.ion()  # Turn on interactive mode
+        fig, axes = None, None
+        im1, im2 = None, None
+        
         for i, (camera_pose, K, rgb, feats, depth, base_pose, instance) in enumerate(
             tqdm.tqdm(
                 # TODO: compression of observations
@@ -848,6 +854,27 @@ class SparseVoxelMap(object):
                 mask, instance, info = perception.predict_segmentation(
                     rgb=rgb, depth=depth, base_pose=base_pose
                 )
+
+                rgb_np = rgb.cpu().numpy()
+                if rgb_np.max() > 1.0:
+                    rgb_np = rgb_np / 255.0
+                # Initialize figure and axes on first frame
+                if fig is None:
+                    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+                    im1 = axes[0].imshow(rgb_np)
+                    axes[0].set_title(f"Frame {i} RGB")
+                    axes[0].axis("off")
+                    im2 = axes[1].imshow(mask)
+                    axes[1].set_title(f"Frame {i} Instance Segmentation")
+                    axes[1].axis("off")
+                else:
+                    im1.set_data(rgb_np)
+                    axes[0].set_title(f"Frame {i} RGB")
+                    im2.set_data(mask)
+                    axes[1].set_title(f"Frame {i} Instance Segmentation")
+                plt.pause(0.05)
+                fig.canvas.flush_events()
+
                 instance_classes = info["instance_classes"]
                 instance_scores = info["instance_scores"]
             elif read_observations:
@@ -873,6 +900,9 @@ class SparseVoxelMap(object):
                 camera_K=K,
                 pose_correction=transform_pose,
             )
+        plt.ioff()
+        plt.show()
+                
         return True
 
     def recompute_map(self):
@@ -1247,6 +1277,23 @@ class SparseVoxelMap(object):
                     height=0.1,
                     offset=xyt[:2],
                 )
+
+        # Define test box parameters
+        test_center = np.array([0.0, 0.0, 0.1])  # Slightly above ground
+        test_size = np.array([0.2, 0.2, 0.2])    # Visible size
+        test_color = [1.0, 0.0, 0.0]             # Bright red
+
+        # Create test box
+        test_box = open3d.geometry.TriangleMesh.create_box(
+            width=test_size[0], height=test_size[1], depth=test_size[2]
+        )
+        test_box.paint_uniform_color(test_color)
+
+        # Important: Translate to center the box properly
+        test_box.translate(test_center - test_size / 2.0)
+
+        # Add to geometries list
+        geoms.append(test_box)
 
         if instances:
             self._get_instances_open3d(geoms)

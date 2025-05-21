@@ -139,7 +139,9 @@
         "coat_rack": 136,
         "rug": 137,
         "mat": 138,
-        "person": 139
+        "person": 139,
+        "chair":140,
+        "table":141
     },
     "recep_category_to_recep_category_id": {
         "bathtub": 0,

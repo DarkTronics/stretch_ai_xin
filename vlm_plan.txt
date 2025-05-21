@@ -1,1 +1,1 @@
-goto(img_0); pickup(img_0); goto(img_30); placeon(img_30); goto(img_26)
+gpt API error

@@ -9,7 +9,7 @@ pad_obstacles: 1
 detection:
   module: detic
   category_map_file: example_cat_map.json
-
+  
 # TAMP parameters
 guarantee_instance_is_reachable: True
 plan_with_reachable_instances: True
@@ -17,8 +17,26 @@ plan_with_scene_graph: False
 scene_graph:
   max_near_distance: 0.1
   min_on_height: 0.05
-  max_on_height: 0.2
+  max_on_height: 0.1
 
+instance_memory:
+  use_instance_memory: True
+
+#   min_instance_thickness: 0.002    # Lower to allow thinner objects (e.g., chair legs)
+#   min_instance_vol: 1e-9           # Lower to allow smaller objects/fragments
+#   max_instance_vol: 5.0            # Raise to allow larger objects (tables)
+#   min_instance_height: 0.01        # Lower to allow short objects (chair seats)
+#   max_instance_height: 3.0         # Raise to allow tall objects
+#   min_pixels_for_instance_view: 5  # Lower to allow small/fragmented detections
+#   min_percent_for_instance_view: 0.005 # Lower to allow tiny mask regions
+#   use_visual_feat: True
+#   matching:
+#     feature_match_threshold: 0.15  # Raise to allow looser feature matching
+
+# filters:
+#   use_median_filter: False
+#   # median_filter_size: 3
+#   # median_filter_max_error: 0.05
 vlm:
   vlm_option: gpt4
   vlm_context_length: 20  # How long messages sent to the vlm server can be if we are using it
